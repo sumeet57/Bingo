@@ -5,6 +5,18 @@ export const tokenOptions = {
   sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
+export const refreshTokenOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  maxAge: 30 * 24 * 60 * 60 * 1000,
+};
+export const accessTokenOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  maxAge: 30 * 60 * 1000,
+};
 export const generateToken = (userId) => {
   const accessToken = jwt.sign({ id: userId }, process.env.JWT_SECRET, {
     expiresIn: "30m",

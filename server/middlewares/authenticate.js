@@ -1,4 +1,5 @@
 import {
+  accessTokenOptions,
   generateToken,
   tokenOptions,
   verifyToken,
@@ -21,10 +22,11 @@ export const authenticate = async (req, res, next) => {
       const tokens = {
         accessToken: token.accessToken,
       };
-      res.cookie("accessToken", tokens.accessToken, tokenOptions);
+      res.cookie("accessToken", tokens.accessToken, accessTokenOptions);
       req.userId = userData.id;
     } else {
       const userData = verifyToken(accessToken);
+
       if (!userData) {
         return res.status(403).json({ error: "Invalid access token" });
       }

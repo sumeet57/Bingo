@@ -9,9 +9,11 @@ export function addPlayer(roomId, userId, playerData) {
   const roomPlayers = initRoomPlayers(roomId);
   const existing = roomPlayers.get(userId) || {
     name: playerData.name || "",
+    role: playerData.role || "player",
     claims: 0,
     ticket: playerData.ticket ?? null,
   };
+
   const updated = { ...existing, ...playerData };
   roomPlayers.set(userId, updated);
   return updated;
