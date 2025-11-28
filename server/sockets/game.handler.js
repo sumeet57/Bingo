@@ -113,6 +113,11 @@ export default function registerBingoGameHandlers(io, socket) {
       return reply({ ok: false, error: "no numbers selected" });
     }
 
+    // ✅ 4 numbers if line contains FREE, 5 numbers otherwise
+    if (selectedNumbers.length < 4 || selectedNumbers.length > 5) {
+      return reply({ ok: false, error: "invalid line length" });
+    }
+
     const invalid = selectedNumbers.some((n) => !room.drawnNumber.includes(n));
     if (invalid) {
       return reply({
@@ -154,7 +159,6 @@ export default function registerBingoGameHandlers(io, socket) {
             room: finalRoom,
             players,
           });
-
           cleanupRoom(io, roomId);
         }
 

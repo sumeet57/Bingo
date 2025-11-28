@@ -1,85 +1,86 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { UserContext } from "../context/UserContext";
-import socket from "../components/socket";
+import { useSocketContext } from "../context/SocketContext";
 
 const Home = () => {
   const { user, logout } = useContext(UserContext);
+  const { state: socketState, actions } = useSocketContext();
   const navigate = useNavigate();
 
-  const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [creatingRoom, setCreatingRoom] = useState(false);
-
   const [joinModalOpen, setJoinModalOpen] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
 
+  const [roomIdInput, setRoomIdInput] = useState("");
+  const [winnerLimitInput, setWinnerLimitInput] = useState("2");
+
+  const isSocketConnected = socketState.connected;
+  const isAuth = Boolean(user);
+  const canUseSocket = isSocketConnected && isAuth;
+
   useEffect(() => {
-    const handleConnect = () => {
-      console.log("Socket connected in Home component:", socket.id);
-      setIsSocketConnected(true);
-    };
+    if (socketState.connected) {
+      console.log("Socket connected in Home");
+    }
+  }, [socketState.connected]);
 
-    const handleDisconnect = () => {
-      console.log("Socket disconnected in Home component");
-      setIsSocketConnected(false);
-    };
+  const handleCreateLobby = async () => {
+    if (!user?._id) {
+      toast.error("Please sign in to create a lobby.");
+      return;
+    }
 
-    const handleRoomUpdated = (data) => {
-      console.log("Room updated:", data);
-    };
+    const cleanedRoomId =
+      roomIdInput && roomIdInput.toString().trim().length > 0
+        ? roomIdInput.toString().trim()
+        : Date.now().toString();
 
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("room:updated", handleRoomUpdated);
-
-    return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("room:updated", handleRoomUpdated);
-    };
-  }, []);
-
-  const handleCreateLobby = () => {
-    if (!user?._id) return;
+    const winnerLimitNumber = Number(winnerLimitInput);
+    const winnerLimit =
+      Number.isNaN(winnerLimitNumber) || winnerLimitNumber <= 0
+        ? 1
+        : winnerLimitNumber;
 
     setCreatingRoom(true);
+    const res = await actions.createRoom({
+      roomId: cleanedRoomId,
+      winnerLimit,
+    });
+    setCreatingRoom(false);
 
-    socket.emit(
-      "room:create",
-      {
-        hostUserId: user._id,
-        hostName: user?.fullName?.firstName || "Host",
-        winnerLimit: 2,
-        roomId: 12345, // later you can randomize or input roomId
+    if (!res.ok) {
+      toast.error(res.error || "Failed to create room.");
+      return;
+    }
+
+    toast.success("Room created!");
+    navigate("/room", {
+      state: {
+        roomId: res.room?.id || cleanedRoomId,
+        ticketIndex: res.ticketIndex,
       },
-      (response) => {
-        console.log("Create room response:", response);
-        setCreatingRoom(false);
-
-        if (!response || !response.ok) {
-          console.error("Room create failed:", response?.error);
-          return;
-        }
-
-        navigate("/room", {
-          state: {
-            roomId: response.room?.id || 12345,
-            ticketIndex: response.ticketIndex,
-          },
-        });
-      }
-    );
+    });
   };
 
   const openJoinModal = () => {
+    if (!canUseSocket) {
+      toast.error("You must be online and signed in to join rooms.");
+      return;
+    }
     setJoinModalOpen(true);
     setLoadingRooms(true);
 
-    socket.emit("lobby:get_rooms", (roomsFromServer) => {
-      console.log("Rooms list:", roomsFromServer);
-      setRooms(roomsFromServer || []);
-      setLoadingRooms(false);
+    // Use raw socket via context's socketState / direct import is fine if you kept it.
+    // Assuming you still import socket in this file earlier; if not, move this logic into context.
+    import("../components/socket").then(({ default: socket }) => {
+      socket.emit("lobby:get_rooms", (roomsFromServer) => {
+        console.log("Rooms list:", roomsFromServer);
+        setRooms(roomsFromServer || []);
+        setLoadingRooms(false);
+      });
     });
   };
 
@@ -88,38 +89,27 @@ const Home = () => {
     setRooms([]);
   };
 
-  const handleJoinRoom = (roomId) => {
-    if (!user?._id) return;
+  const handleJoinRoom = async (roomId) => {
+    if (!user?._id) {
+      toast.error("Please sign in to join a lobby.");
+      return;
+    }
 
-    socket.emit(
-      "room:join",
-      {
-        roomId,
-        userId: user._id,
-        name: user?.fullName?.firstName || "Player",
+    const res = await actions.joinRoom(roomId);
+    if (!res.ok) {
+      toast.error(res.error || "Failed to join room.");
+      return;
+    }
+
+    toast.success(`Joined room #${res.room?.id || roomId}`);
+    closeJoinModal();
+    navigate("/room", {
+      state: {
+        roomId: res.room?.id || roomId,
+        ticketIndex: res.ticketIndex,
       },
-      (response) => {
-        console.log("Join room response:", response);
-
-        if (!response || !response.ok) {
-          console.error("Join room failed:", response?.error);
-          return;
-        }
-
-        closeJoinModal();
-
-        navigate("/room", {
-          state: {
-            roomId: response.room?.id || roomId,
-            ticketIndex: response.ticketIndex,
-          },
-        });
-      }
-    );
+    });
   };
-
-  const isAuth = Boolean(user);
-  const canUseSocket = isSocketConnected && isAuth;
 
   return (
     <div className="min-h-screen w-full bg-zinc-900 text-white flex items-center justify-center px-4">
@@ -161,6 +151,44 @@ const Home = () => {
           </p>
         </div>
 
+        {user && (
+          <div className="bg-zinc-900/60 border border-zinc-700 rounded-xl p-4 space-y-3 mt-1">
+            <p className="text-xs text-zinc-400 mb-1">
+              Lobby Settings (for Create Lobby)
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 flex flex-col gap-1">
+                <label className="text-xs text-zinc-400">Room ID</label>
+                <input
+                  type="text"
+                  value={roomIdInput}
+                  onChange={(e) => setRoomIdInput(e.target.value)}
+                  placeholder="e.g. 12345 or SUMEET123"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                />
+                <span className="text-[10px] text-zinc-500">
+                  Leave empty to auto-generate.
+                </span>
+              </div>
+              <div className="w-full sm:w-28 flex flex-col gap-1">
+                <label className="text-xs text-zinc-400">
+                  Number of Winners
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  value={winnerLimitInput}
+                  onChange={(e) => setWinnerLimitInput(e.target.value)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm outline-none focus:border-emerald-500"
+                />
+                <span className="text-[10px] text-zinc-500">
+                  Must be at least 1.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
           {!user && (
             <button
@@ -177,6 +205,7 @@ const Home = () => {
                 className="flex-1 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold py-3 rounded-lg transition-colors"
                 onClick={async () => {
                   await logout();
+                  toast.info("Logged out.");
                 }}
               >
                 Logout

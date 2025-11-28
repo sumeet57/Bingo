@@ -1,82 +1,71 @@
-// src/pages/Room.jsx
-import { useEffect, useState, useContext } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useContext, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 import { UserContext } from "../context/UserContext";
-import socket from "../components/socket";
+import { useSocketContext } from "../context/SocketContext";
 
 const Room = () => {
   const { user } = useContext(UserContext);
+  const { state, actions } = useSocketContext();
+  const { room, players, isHost } = state;
+
   const navigate = useNavigate();
-  const { state } = useLocation();
+  const { state: navState } = useLocation();
 
-  const roomId = state?.roomId;
-  const myTicketIndex = state?.ticketIndex;
-
-  const [room, setRoom] = useState(null);
-  const [players, setPlayers] = useState([]);
-  const [gameStatus, setGameStatus] = useState("pending");
-  const [starting, setStarting] = useState(false);
-  const [isHost, setIsHost] = useState(false);
+  const fallbackRoomId = navState?.roomId;
+  const fallbackTicketIndex = navState?.ticketIndex;
 
   useEffect(() => {
-    if (!roomId || !user?._id) {
+    if (!user?._id) {
+      toast.error("Please sign in.");
       navigate("/");
       return;
     }
 
-    const handleRoomUpdated = ({ room, players }) => {
-      setRoom(room);
-      setPlayers(players);
-      setGameStatus(room.status);
+    if (!room && !fallbackRoomId) {
+      toast.error("No room joined.");
+      navigate("/");
+      return;
+    }
+  }, [user?._id, room, fallbackRoomId, navigate]);
 
-      const hostPlayer = players.find(
-        (p) => p.userId === user._id && p.role === "host"
-      );
-      setIsHost(Boolean(hostPlayer));
-    };
-
-    const handleGameStarted = () => {
-      setGameStatus("ongoing");
+  useEffect(() => {
+    if (room?.status === "ongoing" && room?.id) {
       navigate("/game", {
         state: {
-          roomId,
-          ticketIndex: myTicketIndex,
+          roomId: room.id,
+          ticketIndex: state.ticketIndex ?? fallbackTicketIndex,
           isHost,
         },
       });
-    };
+    }
+  }, [
+    room?.status,
+    room?.id,
+    isHost,
+    state.ticketIndex,
+    fallbackTicketIndex,
+    navigate,
+  ]);
 
-    const handleGameOver = () => {
-      navigate("/");
-    };
-
-    socket.on("room:updated", handleRoomUpdated);
-    socket.on("bingo:started", handleGameStarted);
-    socket.on("bingo:game_over", handleGameOver);
-
-    return () => {
-      socket.off("room:updated", handleRoomUpdated);
-      socket.off("bingo:started", handleGameStarted);
-      socket.off("bingo:game_over", handleGameOver);
-    };
-  }, [roomId, user?._id, myTicketIndex, isHost, navigate]);
-
-  const handleStartGame = () => {
-    if (!roomId) return;
-    setStarting(true);
-    socket.emit("bingo:start", { roomId }, (res) => {
-      if (!res?.ok) {
-        console.error("Start failed:", res?.error);
-        setStarting(false);
-      }
-    });
+  const handleStartGame = async () => {
+    const res = await actions.startGame();
+    if (!res.ok) {
+      toast.error(res.error || "Failed to start game.");
+      return;
+    }
+    toast.success("Game starting...");
   };
+
+  const derivedRoomId = room?.id || fallbackRoomId;
+  const derivedTicketIndex = state.ticketIndex ?? fallbackTicketIndex;
+  const gameStatus = room?.status || "pending";
 
   return (
     <div className="min-h-screen w-full bg-zinc-900 text-white flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mt-4">Room #{roomId}</h1>
+      <h1 className="text-3xl font-bold mt-4">Room #{derivedRoomId}</h1>
       <p className="text-sm text-zinc-400">
-        Your Ticket Index: {myTicketIndex}
+        Your Ticket Index: {derivedTicketIndex}
       </p>
       <p className="text-xs mt-1">
         Status:{" "}
@@ -121,15 +110,10 @@ const Room = () => {
 
       {isHost && gameStatus === "pending" && (
         <button
-          className={`mt-6 px-6 py-3 font-semibold rounded-md transition ${
-            starting
-              ? "bg-gray-600 cursor-not-allowed"
-              : "bg-green-500 hover:bg-green-600 active:bg-green-700"
-          }`}
-          disabled={starting}
+          className="mt-6 px-6 py-3 font-semibold rounded-md bg-green-500 hover:bg-green-600 active:bg-green-700 transition"
           onClick={handleStartGame}
         >
-          {starting ? "Starting..." : "Start Game"}
+          Start Game
         </button>
       )}
 
