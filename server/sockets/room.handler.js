@@ -31,7 +31,6 @@ function cleanupRoom(io, roomId) {
 export default function registerRoomHandlers(io, socket) {
   socket.on("room:create", (payload, cb) => {
     const { roomId, winnerLimit, hostUserId, hostName } = payload || {};
-    console.log("room:create payload:", payload);
     if (!roomId || !hostUserId) {
       if (typeof cb === "function")
         cb({ ok: false, error: "roomId and hostUserId required" });
@@ -48,8 +47,8 @@ export default function registerRoomHandlers(io, socket) {
 
     const ticketIndex = assignTicketIndex(roomId);
     addPlayer(roomId, hostUserId, {
-      name: hostName, // <-- keep actual user name
-      role: "host", // <-- add HOST ROLE
+      name: hostName,
+      role: "host",
       claims: 0,
       ticket: ticketIndex,
     });

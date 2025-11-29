@@ -7,6 +7,7 @@ import Game from "./pages/Game";
 import { UserContext, UserContextProvider } from "./context/UserContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ToastContainer } from "react-toastify";
+import LandingPage from "./pages/LandingPage";
 
 const AppInner = () => {
   const { user } = useContext(UserContext);
@@ -14,7 +15,8 @@ const AppInner = () => {
   return (
     <SocketProvider currentUser={user}>
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/home" element={<Home />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/room" element={<Room />} />
         <Route path="/game" element={<Game />} />
         <Route path="/auth" element={<Auth />} />

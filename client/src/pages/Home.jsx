@@ -15,7 +15,7 @@ const Home = () => {
   const [loadingRooms, setLoadingRooms] = useState(false);
 
   const [roomIdInput, setRoomIdInput] = useState("");
-  const [winnerLimitInput, setWinnerLimitInput] = useState("2");
+  const [winnerLimitInput, setWinnerLimitInput] = useState("1");
 
   const isSocketConnected = socketState.connected;
   const isAuth = Boolean(user);
