@@ -91,7 +91,7 @@ const LandingPage = () => {
           className="flex flex-wrap gap-4 justify-center mt-6"
         >
           <ButtonPrimary
-            onClick={() => navigate("/auth")}
+            onClick={() => navigate("/home")}
             icon={<FaGamepad />}
             text="Play Now"
           />
