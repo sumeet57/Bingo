@@ -14,7 +14,10 @@ userApi.interceptors.response.use(
   (error) => {
     if (error.response) {
       if (error.response.status === 401) {
-        window.location.href = "/auth";
+        console.log("Unauthorized! Redirecting to /auth");
+        if (window.location.pathname !== "/auth") {
+          window.location.href = "/auth";
+        }
       } else {
         return Promise.reject(error.response.data.error);
       }
