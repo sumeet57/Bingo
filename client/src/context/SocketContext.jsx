@@ -5,6 +5,7 @@ import {
   loadBingoSession,
   clearBingoSession,
 } from "../utils/bingoSession";
+import { toast } from "react-toastify";
 
 const SocketContext = createContext(null);
 
@@ -78,6 +79,10 @@ export const SocketProvider = ({ children, currentUser }) => {
 
     const handleGameOver = (data) => {
       console.log("Game over:", data);
+      toast.success(`Game Over! Winners: ${data.winnerNames.join(", ")}`, {
+        autoClose: 10000,
+        position: "top-center",
+      });
       clearBingoSession();
       resetState();
     };

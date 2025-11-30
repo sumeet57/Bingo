@@ -158,6 +158,10 @@ export default function registerBingoGameHandlers(io, socket) {
           io.to(roomId).emit("bingo:game_over", {
             room: finalRoom,
             players,
+            winnerNames: finalRoom.winner.map((uid) => {
+              const p = getPlayer(roomId, uid);
+              return p ? p.name : "Unknown";
+            }),
           });
           cleanupRoom(io, roomId);
         }

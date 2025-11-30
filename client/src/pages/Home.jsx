@@ -183,11 +183,11 @@ const Home = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-1 gap-3">
           {!user ? (
             <button
               onClick={() => navigate("/auth")}
-              className="py-3.5 px-6 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-black font-bold rounded-xl transition text-sm sm:text-base"
+              className="py-3.5 px-6 w-full bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-black font-bold rounded-xl transition text-sm sm:text-base"
             >
               Sign in to Play
             </button>

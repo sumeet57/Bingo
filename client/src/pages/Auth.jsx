@@ -19,36 +19,28 @@ const InputField = ({
   value,
   onChange,
 }) => {
-  const [inputType, setInputType] = useState(type);
-
-  const toggleVisibility = () => {
-    setInputType((prevType) => (prevType === "password" ? "text" : "password"));
-  };
-
-  const isPassword = type === "password";
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="relative mb-4">
-      <Icon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10" />
       <input
-        type={inputType}
+        type={type === "password" && showPassword ? "text" : type}
         name={name}
         id={id}
         placeholder={placeholder}
-        onChange={onChange}
         value={value}
-        className="w-full pl-10 pr-10 py-2 border border-gray-700 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
+        onChange={onChange}
+        className="w-full pl-11 pr-12 py-3.5 bg-zinc-900/70 border border-zinc-700 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200"
+        autoComplete="off"
       />
-      {isPassword && (
+      {type === "password" && (
         <button
           type="button"
-          onClick={toggleVisibility}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-          aria-label={
-            inputType === "password" ? "Show password" : "Hide password"
-          }
+          onClick={() => setShowPassword(!showPassword)}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition"
         >
-          {inputType === "password" ? <FaEye /> : <FaEyeSlash />}
+          {showPassword ? <FaEyeSlash size={19} /> : <FaEye size={19} />}
         </button>
       )}
     </div>
@@ -57,142 +49,132 @@ const InputField = ({
 
 const Auth = () => {
   const { register, login, loading } = useContext(UserContext);
+  const [isLogin, setIsLogin] = useState(true);
 
-  const authTypes = {
-    LOGIN: "login",
-    REGISTER: "register",
-  };
-
-  const [authType, setAuthType] = useState(authTypes.LOGIN);
   const [formData, setFormData] = useState({
-    fullName: {
-      firstName: "",
-      lastName: "",
-    },
+    fullName: { firstName: "", lastName: "" },
     email: "",
     password: "",
   });
 
   const updateValues = useCallback((e) => {
-    const { value, name, id } = e.target;
+    const { name, id, value } = e.target;
     setFormData((prev) => {
       if (name === "fullName") {
         return {
           ...prev,
-          [name]: {
-            ...prev[name],
-            [id]: value,
-          },
-        };
-      } else {
-        return {
-          ...prev,
-          [name]: value,
+          fullName: { ...prev.fullName, [id]: value },
         };
       }
+      return { ...prev, [name]: value };
     });
   }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (authType === authTypes.REGISTER) {
-        await register(formData);
+      if (isLogin) {
+        await login({ email: formData.email, password: formData.password });
       } else {
-        const { fullName, ...rest } = formData;
-        await login(rest);
+        await register(formData);
       }
-    } catch (error) {
-      console.error("Auth Error:", error);
+    } catch (err) {
+      console.error("Auth error:", err);
     }
   };
 
-  const toggleAuthType = () => {
-    setAuthType((prevType) =>
-      prevType === authTypes.LOGIN ? authTypes.REGISTER : authTypes.LOGIN
-    );
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-900 p-4">
-      <div className="bg-zinc-800 p-8 rounded-xl shadow-2xl w-full max-w-md">
-        <h2 className="text-3xl font-bold mb-6 text-white text-center">
-          {authType === authTypes.LOGIN ? "Sign In" : "Create Account"}
-        </h2>
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md">
+        {/* Glass Card */}
+        <div className="bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 rounded-2xl p-8 shadow-2xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-white">Bingo Arena</h1>
+            <p className="text-zinc-400 mt-2 text-sm">
+              {isLogin ? "Welcome back!" : "Create your account"}
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} key={authType}>
-          {authType === authTypes.REGISTER && (
-            <div className="flex gap-4">
-              <div className="flex-1">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* First & Last Name — Perfect on all screens */}
+            {!isLogin && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField
                   icon={FaUser}
                   type="text"
                   name="fullName"
                   id="firstName"
                   placeholder="First Name"
-                  onChange={updateValues}
                   value={formData.fullName.firstName}
+                  onChange={updateValues}
                 />
-              </div>
-              <div className="flex-1">
                 <InputField
                   icon={FaUser}
                   type="text"
                   name="fullName"
                   id="lastName"
                   placeholder="Last Name"
-                  onChange={updateValues}
                   value={formData.fullName.lastName}
+                  onChange={updateValues}
                 />
               </div>
-            </div>
-          )}
+            )}
 
-          <InputField
-            icon={FaEnvelope}
-            type="email"
-            name="email"
-            id="email"
-            placeholder="Email Address"
-            onChange={updateValues}
-            value={formData.email}
-          />
+            <InputField
+              icon={FaEnvelope}
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={updateValues}
+            />
 
-          <InputField
-            icon={FaLock}
-            type="password"
-            name="password"
-            id="password"
-            placeholder="Password"
-            onChange={updateValues}
-            value={formData.password}
-          />
+            <InputField
+              icon={FaLock}
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={formData.password}
+              onChange={updateValues}
+            />
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 mt-6 p-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition duration-150 disabled:opacity-50"
-          >
-            {authType === authTypes.LOGIN ? <FaSignInAlt /> : <FaUserPlus />}
-            {loading
-              ? "Processing..."
-              : authType === authTypes.LOGIN
-              ? "Login"
-              : "Register"}
-          </button>
-        </form>
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:from-zinc-700 disabled:to-zinc-800 text-white font-bold rounded-xl shadow-lg transform active:scale-98 transition-all duration-200 flex items-center justify-center gap-3 text-lg"
+            >
+              {loading ? (
+                "Please wait..."
+              ) : (
+                <>
+                  {isLogin ? <FaSignInAlt /> : <FaUserPlus />}
+                  {isLogin ? "Sign In" : "Create Account"}
+                </>
+              )}
+            </button>
+          </form>
 
-        <div className="mt-6 text-center">
-          <button
-            type="button"
-            onClick={toggleAuthType}
-            className="text-blue-400 hover:text-blue-300 transition duration-150 text-sm"
-          >
-            {authType === authTypes.LOGIN
-              ? "Don't have an account? Sign Up"
-              : "Already have an account? Login"}
-          </button>
+          {/* Toggle */}
+          <div className="mt-8 text-center">
+            <button
+              type="button"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-blue-400 hover:text-blue-300 font-medium text-sm transition"
+            >
+              {isLogin
+                ? "New here? Create an account"
+                : "Already have an account? Sign in"}
+            </button>
+          </div>
         </div>
+
+        {/* Footer */}
+        <p className="text-center text-zinc-600 text-xs mt-10">
+          Real-time multiplayer bingo • Made with passion
+        </p>
       </div>
     </div>
   );
