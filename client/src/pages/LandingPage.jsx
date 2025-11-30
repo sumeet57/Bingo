@@ -2,460 +2,259 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  FaUsers,
-  FaTrophy,
-  FaGithub,
-  FaSyncAlt,
   FaGamepad,
-  FaRegCheckCircle,
+  FaGithub,
+  FaTrophy,
+  FaUsers,
   FaShieldAlt,
-  FaInstagram,
-  FaLinkedin,
-  FaGlobe,
-  FaBolt,
-  FaChartLine,
 } from "react-icons/fa";
-import { MdLiveTv, MdOutlineGridView } from "react-icons/md";
+import { MdLiveTv } from "react-icons/md";
+import { IoMdStarOutline } from "react-icons/io";
 
-/* =========================================================
-                    LANDING PAGE
-=========================================================*/
 const LandingPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="bg-zinc-950 text-white overflow-x-hidden selection:bg-orange-400/40 relative">
-      {/* ==== Background Grid ==== */}
-      <div
-        className="fixed inset-0 bg-[linear-gradient(to_right,#27272a_1px,transparent_1px),linear-gradient(to_bottom,#27272a_1px,transparent_1px)] bg-[size:4rem_4rem]
-      [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)] opacity-20 pointer-events-none"
-      ></div>
+    <div className="bg-zinc-950 text-white min-h-screen">
+      {/* ================= HERO ================= */}
+      <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-6 text-center overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute -top-24 right-[-80px] w-80 h-80 bg-orange-500/15 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-[-80px] left-[-60px] w-72 h-72 bg-orange-400/10 blur-[120px] rounded-full pointer-events-none" />
 
-      {/* =========================================================
-                         HERO SECTION
-      =========================================================*/}
-      <section className="relative min-h-screen flex flex-col justify-center items-center text-center px-4 md:px-6 overflow-hidden gap-4 md:gap-6">
-        {/* Static Glow */}
-        <div className="absolute top-20 left-10 h-96 w-96 bg-orange-500/20 blur-[140px] rounded-full"></div>
-        <div className="absolute -bottom-10 right-10 h-96 w-96 bg-orange-400/20 blur-[140px] rounded-full"></div>
-
-        {/* Bingo Orbs */}
-        <Orb txt="B5" pos="top-32 right-20" size="16" />
-        <Orb txt="O72" pos="bottom-40 left-16" size="20" />
-        <Orb txt="N38" pos="top-1/2 right-32" size="12" />
-
-        {/* Hero Title */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <span className="inline-block px-4 py-2 bg-orange-500/10 border border-orange-400/30 rounded-full text-orange-400 text-sm font-semibold">
-            🎮 Built with MERN + Socket.IO
-          </span>
-        </motion.div>
+        <motion.span
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 text-xs md:text-sm text-orange-300 font-medium"
+        >
+          Realtime Multiplayer • MERN + Socket.IO
+        </motion.span>
 
         <motion.h1
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6 }}
-          className="text-6xl sm:text-7xl lg:text-8xl font-extrabold tracking-tight text-orange-400 drop-shadow-[0_0_35px_#e47f1a80]"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="mt-4 text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-orange-400 drop-shadow-[0_0_20px_#f973161f]"
         >
-          Bingo Arena
+          Online Multiplayer Bingo
         </motion.h1>
 
+        <motion.p
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-3 max-w-xl text-sm md:text-base text-zinc-300 leading-relaxed"
+        >
+          Fast, fair and secure multiplayer Bingo. Unique tickets, live draws,
+          strict claim validation and smooth reconnection — built for real
+          games, not just demos.
+        </motion.p>
+
+        {/* Buttons */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
+          className="mt-7 flex flex-wrap gap-3 justify-center"
         >
-          <p className="text-lg md:text-xl text-zinc-300 max-w-3xl mx-auto leading-relaxed">
-            Experience futuristic Bingo with{" "}
-            <span className="text-orange-400 font-semibold">
-              real-time sync + secure claim rules.
-            </span>
-          </p>
-          <p className="text-sm md:text-lg text-zinc-400 max-w-xl mx-auto mt-2">
-            Live draw • Anti-cheat logic • Smart reconnect • Zero-lag UI
-          </p>
-        </motion.div>
-
-        {/* Stats */}
-        <div className="flex gap-4 flex-wrap justify-center mt-6">
-          <Stat icon={<FaUsers />} label="Multiplayer" value="Live" />
-          <Stat icon={<FaShieldAlt />} label="Anti-Cheat" value="Secure" />
-          <Stat icon={<FaBolt />} label="Realtime" value="Fast" />
-        </div>
-
-        {/* Hero Actions */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="flex flex-wrap gap-4 justify-center mt-6"
-        >
-          <ButtonPrimary
+          <button
+            type="button"
             onClick={() => navigate("/home")}
-            icon={<FaGamepad />}
-            text="Play Now"
-          />
-          <ButtonOutline
-            onClick={() => scrollToId("about")}
-            text="Learn More"
-          />
-          <ButtonDark
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-orange-500 text-black text-sm font-semibold hover:bg-orange-400 transition"
+          >
+            <FaGamepad size={16} />
+            Play Now
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              document
+                .getElementById("about-section")
+                ?.scrollIntoView({ behavior: "smooth" })
+            }
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg border border-zinc-700 text-sm text-zinc-200 hover:border-orange-400 hover:text-orange-300 transition"
+          >
+            Learn More
+          </button>
+
+          <a
             href="https://github.com/sumeet57/Bingo"
-            text="Star on GitHub"
-            icon={<FaGithub />}
-          />
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-700 text-sm text-zinc-200 hover:border-orange-400 hover:text-orange-300 transition"
+          >
+            Github
+            <IoMdStarOutline color="yellow" size={16} />
+          </a>
         </motion.div>
       </section>
 
-      {/* =========================================================
-                          ABOUT SECTION
-      =========================================================*/}
-      <Section
-        id="about"
-        label="About The Project"
-        title="Built for Speed, Fairness & Scale"
+      {/* ================= ABOUT + FEATURES ================= */}
+      <section
+        id="about-section"
+        className="py-16 md:py-20 px-6 max-w-6xl mx-auto"
       >
-        <p className="text-base md:text-lg text-zinc-300 max-w-4xl mx-auto leading-relaxed">
-          A realtime multiplayer Bingo platform powered by{" "}
-          <span className="text-orange-400">MERN + Socket.IO</span>
-          ensuring secure claim validation, smooth reconnections & automated
-          memory cleanup.
-        </p>
-        <p className="text-sm md:text-lg text-zinc-400 max-w-3xl mx-auto mt-4">
-          Designed for production-scale matchmaking — fast, recoverable &
-          cheat-proof.
-        </p>
+        <div className="grid md:grid-cols-2 gap-10 items-center">
+          {/* About text */}
+          <div>
+            <h2 className="text-2xl md:text-3xl font-semibold text-orange-400">
+              Built for real-time play, not static demos.
+            </h2>
+            <p className="mt-3 text-sm md:text-base text-zinc-300 leading-relaxed">
+              Bingo Arena is a production-style Bingo engine using MongoDB,
+              Express, React, Node, and Socket.IO. It focuses on correctness,
+              game security, and robustness: strict server-side validation,
+              memory-efficient room stores, and clean match teardown.
+            </p>
+            <p className="mt-3 text-xs md:text-sm text-zinc-500">
+              Designed and developed by{" "}
+              <a
+                href="https://sumeet.live"
+                target="_blank"
+                rel="noreferrer"
+                className="text-orange-400 hover:underline"
+              >
+                Sumeet
+              </a>
+              .
+            </p>
+          </div>
 
-        <TechList
-          items={[
-            "React",
-            "Node.js",
-            "MongoDB",
-            "Socket.IO",
-            "Express",
-            "Framer Motion",
-          ]}
-        />
-
-        <DeveloperCard
-          name="Sumeet Umbalkar"
-          role="Full Stack Developer"
-          links={[
-            ["GitHub", "https://github.com/sumeet57", <FaGithub />],
-            [
-              "Instagram",
-              "https://instagram.com/sumeet.codes",
-              <FaInstagram />,
-            ],
-            [
-              "LinkedIn",
-              "https://linkedin.com/in/sumeet-umbalkar",
-              <FaLinkedin />,
-            ],
-            ["Portfolio", "https://sumeet.live", <FaGlobe />],
-          ]}
-        />
-      </Section>
-
-      {/* =========================================================
-                          FEATURES
-      =========================================================*/}
-      <SectionDark label="Why Choose Bingo Arena?" title="Powerful Features">
-        <FeatureGrid
-          list={[
-            [
-              <FaUsers />,
-              "Realtime Multiplayer",
-              "Instant sync across all devices",
-            ],
-            [
-              <MdLiveTv />,
-              "Live Draw Streaming",
-              "Executed with zero desync delay",
-            ],
-            [
-              <FaSyncAlt />,
-              "Smart Reconnect",
-              "Auto restore game context instantly",
-            ],
-            [
-              <FaTrophy />,
-              "Pattern Detection",
-              "Server-auth claims only — no cheating",
-            ],
-            [
-              <FaShieldAlt />,
-              "Anti-Cheat Logic",
-              "All claims verified backend-side",
-            ],
-            [
-              <MdOutlineGridView />,
-              "Unique Tickets",
-              "Never repeating — always random",
-            ],
-          ]}
-        />
-      </SectionDark>
-
-      {/* =========================================================
-                         HOW TO PLAY + RULES
-      =========================================================*/}
-      <Section id="howToPlay" label="Getting Started" title="How To Play">
-        <div className="grid lg:grid-cols-2 gap-10 max-w-6xl mx-auto">
-          <Card title="Game Steps" icon={<FaGamepad />}>
-            <PlayStep number="1" text="Join or create a room" />
-            <PlayStep number="2" text="Host starts the draw sequence" />
-            <PlayStep number="3" text="Numbers stream to all players" />
-            <PlayStep number="4" text="Tap numbers on your ticket" />
-            <PlayStep number="5" text="Select 5 in a line & claim" />
-            <PlayStep number="6" text="Valid claim wins the round" />
-          </Card>
-
-          <Card title="Rules & Winning" icon={<FaTrophy />}>
-            <Rule valid text="Must select exactly 5 cells" />
-            <Rule valid text="Must form line (Row/Column/Diag)" />
-            <Rule valid text="FREE center auto-counts" />
-            <Rule text="Scattered pattern invalid" />
-            <Rule text="Duplicate line claims rejected" />
-          </Card>
+          {/* Feature cards */}
+          <div className="grid sm:grid-cols-2 gap-4">
+            <FeatureCard
+              icon={<FaUsers size={18} />}
+              title="Realtime Multiplayer"
+              text="Sockets keep all players in sync with minimal latency."
+            />
+            <FeatureCard
+              icon={<MdLiveTv size={18} />}
+              title="Live Draws"
+              text="Numbers are broadcast instantly to everyone in the room."
+            />
+            <FeatureCard
+              icon={<FaShieldAlt size={18} />}
+              title="Secure Claims"
+              text="Server ensures only valid patterns and drawn numbers win."
+            />
+            <FeatureCard
+              icon={<FaTrophy size={18} />}
+              title="Pattern Wins"
+              text="Straight-line Bingo with multi-winner support per room."
+            />
+          </div>
         </div>
-      </Section>
+      </section>
 
-      {/* =========================================================
-                      TECH ARCHITECTURE
-      =========================================================*/}
-      <SectionDark label="Technical Excellence" title="Architecture Highlights">
-        <ArchGrid
-          list={[
-            [
-              "Real-time Engine",
-              "Socket.IO with reconnect fallback",
-              <FaBolt />,
-            ],
-            [
-              "State Management",
-              "Server-auth state + client preview",
-              <FaChartLine />,
-            ],
-            [
-              "Scalable Design",
-              "Memory auto-cleanup + scale-ready",
-              <FaSyncAlt />,
-            ],
-          ]}
-        />
-      </SectionDark>
+      {/* ================= HOW TO PLAY + RULES ================= */}
+      <section className="py-16 md:py-20 px-6 bg-zinc-900/40 border-y border-zinc-800">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="text-2xl md:text-3xl font-semibold text-center text-orange-400">
+            How it works
+          </h2>
+          <p className="mt-2 text-xs md:text-sm text-center text-zinc-400">
+            Simple flow for players, strict logic under the hood.
+          </p>
 
-      {/* =========================================================
-                         CTA SECTION
-      =========================================================*/}
-      <Section id="" title="Ready to Play?" center>
-        <p className="text-zinc-300 max-w-xl mx-auto text-lg mb-8">
-          Join thousands experiencing real-time Bingo like never before.
+          <div className="mt-10 grid md:grid-cols-2 gap-10">
+            {/* Steps */}
+            <div className="space-y-3">
+              <Step number="1" text="Create or join a room from the lobby." />
+              <Step
+                number="2"
+                text="Host starts the game and numbers begin to draw."
+              />
+              <Step
+                number="3"
+                text="Tap the numbers on your ticket as they are called."
+              />
+              <Step
+                number="4"
+                text="Once you have 5 in a straight line, press Claim."
+              />
+            </div>
+
+            {/* Rules card */}
+            <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 md:p-6">
+              <h3 className="text-lg md:text-xl font-semibold text-orange-300 flex items-center gap-2">
+                <FaTrophy />
+                Rules & Claim Logic
+              </h3>
+              <ul className="mt-4 space-y-2 text-xs md:text-sm text-zinc-300 text-left">
+                <RuleItem text="You must select exactly 5 cells to claim." />
+                <RuleItem text="Those cells must form a straight row, column, or diagonal." />
+                <RuleItem text="FREE center counts automatically when part of a valid line." />
+                <RuleItem text="All claimed numbers must already be drawn." />
+                <RuleItem text="Same line cannot be claimed by the same player twice." />
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= CTA ================= */}
+      <section className="py-16 px-6 text-center">
+        <h2 className="text-2xl md:text-3xl font-semibold text-orange-400">
+          Ready to try it?
+        </h2>
+        <p className="mt-2 text-sm text-zinc-400">
+          Jump into the lobby, create a room, and start drawing.
         </p>
+        <button
+          type="button"
+          onClick={() => navigate("/home")}
+          className="mt-6 px-7 py-2.5 rounded-lg bg-orange-500 text-black text-sm font-semibold hover:bg-orange-400 transition inline-flex items-center gap-2"
+        >
+          <FaGamepad size={16} />
+          Go to Lobby
+        </button>
+      </section>
 
-        <ButtonPrimary
-          large
-          onClick={() => navigate("/auth")}
-          icon={<FaGamepad />}
-          text="Start Playing Now"
-        />
-      </Section>
-
-      {/* =========================================================
-                           FOOTER
-      =========================================================*/}
-      <footer className="py-12 border-t border-zinc-800 text-center text-zinc-500">
+      {/* ================= FOOTER ================= */}
+      <footer className="py-8 border-t border-zinc-800 text-center text-[11px] md:text-xs text-zinc-500">
         <p>
-          © {new Date().getFullYear()} Bingo Arena — Built by{" "}
+          © {new Date().getFullYear()} Bingo Arena • Built by{" "}
           <a
-            className="text-orange-400 font-semibold"
             href="https://sumeet.live"
             target="_blank"
+            rel="noreferrer"
+            className="text-orange-400 hover:underline"
           >
             Sumeet
           </a>
         </p>
-        <p className="text-xs mt-2">Powered by MERN Stack + Socket.IO</p>
       </footer>
     </div>
   );
 };
+
 export default LandingPage;
 
-/* =========================================================
-  UI COMPONENTS — CLEANED + NO WARNINGS
-=========================================================*/
+/* =========== Small Reusable Components =========== */
 
-const scrollToId = (id) =>
-  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-
-const ButtonPrimary = ({ text, icon, onClick, large }) => (
-  <button
-    onClick={onClick}
-    className={`px-8 py-${
-      large ? 5 : 4
-    } bg-orange-500 text-black font-bold rounded-xl shadow-xl hover:scale-105 transition flex items-center gap-2`}
-  >
-    {icon} {text}
-  </button>
-);
-
-const ButtonOutline = ({ text, onClick }) => (
-  <button
-    onClick={onClick}
-    className="px-8 py-4 border border-zinc-700 rounded-xl hover:border-orange-400 transition"
-  >
-    {text}
-  </button>
-);
-
-const ButtonDark = ({ href, icon, text }) => (
-  <a
-    href={href}
-    className="px-8 py-4 bg-black/40 border border-zinc-700 rounded-xl hover:border-orange-400 transition flex items-center gap-2"
-  >
-    {icon} {text}
-  </a>
-);
-
-const Stat = ({ icon, label, value }) => (
-  <div className="flex items-center gap-3 px-6 py-3 bg-zinc-900/50 border border-zinc-700 rounded-xl">
-    <span className="text-2xl text-orange-400">{icon}</span>
-    <div>
-      <div className="font-bold">{value}</div>
-      <p className="text-sm text-zinc-400">{label}</p>
+const FeatureCard = ({ icon, title, text }) => (
+  <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-left hover:border-orange-400/70 transition">
+    <div className="flex items-center gap-2 text-orange-300 mb-1.5">
+      <span>{icon}</span>
+      <span className="text-sm font-semibold">{title}</span>
     </div>
+    <p className="text-xs md:text-sm text-zinc-400">{text}</p>
   </div>
 );
 
-const Orb = ({ txt, pos, size }) => (
-  <div
-    className={`hidden lg:flex absolute ${pos} w-${size} h-${size} rounded-full bg-orange-500/10 border border-orange-400/30 text-xl justify-center items-center`}
-  >
-    {txt}
-  </div>
-);
-
-const Section = ({ id, label, title, children, center }) => (
-  <section id={id} className="py-24 px-6 text-center">
-    <span className="px-4 py-2 bg-orange-500/10 border border-orange-400/30 rounded-full text-orange-400 text-sm font-semibold">
-      {label}
-    </span>
-    <h2 className="text-5xl font-bold mt-6 mb-12 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
-      {title}
-    </h2>
-    <div className={`${center ? "flex flex-col items-center" : ""}`}>
-      {children}
-    </div>
-  </section>
-);
-
-const SectionDark = ({ label, title, children }) => (
-  <section className="py-24 px-6 bg-zinc-900/40 border-y border-zinc-800 text-center">
-    <span className="px-4 py-2 bg-orange-500/10 border border-orange-400/30 rounded-full text-orange-400 text-sm font-semibold">
-      {label}
-    </span>
-    <h2 className="text-5xl font-bold mt-6 mb-12 text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">
-      {title}
-    </h2>
-    {children}
-  </section>
-);
-
-const TechList = ({ items }) => (
-  <div className="flex flex-wrap justify-center gap-2 mt-8">
-    {items.map((i) => (
-      <span
-        key={i}
-        className="px-4 py-2 border border-zinc-700 rounded-full text-sm text-zinc-300 hover:text-orange-400 hover:border-orange-400 transition"
-      >
-        {i}
-      </span>
-    ))}
-  </div>
-);
-
-const DeveloperCard = ({ name, role, links }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    viewport={{ once: true }}
-    className="glass p-8 rounded-2xl border border-zinc-700 mx-auto mt-12 w-fit"
-  >
-    <h3 className="text-2xl text-orange-400 font-bold">{name}</h3>
-    <p className="text-zinc-400">{role}</p>
-
-    <div className="flex gap-3 mt-5 justify-center">
-      {links.map(([label, url, icon]) => (
-        <a
-          key={label}
-          href={url}
-          target="_blank"
-          className="p-3 bg-zinc-900/50 border border-zinc-700 rounded-xl hover:border-orange-400 hover:text-orange-400 transition"
-        >
-          {icon}
-        </a>
-      ))}
-    </div>
-  </motion.div>
-);
-
-const FeatureGrid = ({ list }) => (
-  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-    {list.map(([icon, title, text], i) => (
-      <div
-        key={i}
-        className="p-6 glass rounded-2xl border border-zinc-800 hover:border-orange-400/50 hover:scale-105 transition"
-      >
-        <div className="text-4xl text-orange-400 mb-4">{icon}</div>
-        <h3 className="font-bold text-xl mb-2">{title}</h3>
-        <p className="text-zinc-400 text-sm">{text}</p>
-      </div>
-    ))}
-  </div>
-);
-
-const ArchGrid = ({ list }) => (
-  <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-    {list.map(([t, d, i], x) => (
-      <div
-        key={x}
-        className="p-6 glass rounded-2xl border border-zinc-800 hover:border-orange-400/50 transition"
-      >
-        <div className="text-5xl text-orange-400 mb-4">{i}</div>
-        <h3 className="font-bold text-xl mb-2">{t}</h3>
-        <p className="text-sm text-zinc-400">{d}</p>
-      </div>
-    ))}
-  </div>
-);
-
-const Card = ({ title, icon, children }) => (
-  <div className="glass p-8 rounded-3xl border border-zinc-700 text-left hover:border-orange-400/50 transition">
-    <h3 className="text-3xl font-bold text-orange-400 flex gap-2 items-center mb-6">
-      {icon}
-      {title}
-    </h3>
-    {children}
-  </div>
-);
-
-const PlayStep = ({ number, text }) => (
-  <div className="flex items-center gap-3 p-3 bg-zinc-900/30 border border-zinc-800 rounded-xl hover:border-orange-400/50 transition">
-    <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full flex items-center justify-center font-bold text-black">
+const Step = ({ number, text }) => (
+  <div className="flex items-start gap-3">
+    <div className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-orange-500/20 text-[11px] font-semibold text-orange-300 border border-orange-500/60">
       {number}
     </div>
-    <p className="text-zinc-200 text-sm md:text-base">{text}</p>
+    <p className="text-xs md:text-sm text-zinc-300 text-left">{text}</p>
   </div>
 );
 
-const Rule = ({ text, valid }) => (
-  <p
-    className={`text-sm flex gap-2 items-center ${
-      valid ? "text-green-400" : "text-red-400"
-    }`}
-  >
-    {valid ? "✓" : "✗"} {text}
-  </p>
+const RuleItem = ({ text }) => (
+  <li className="flex items-start gap-2">
+    <span className="mt-[3px] h-1.5 w-1.5 rounded-full bg-orange-400" />
+    <span>{text}</span>
+  </li>
 );

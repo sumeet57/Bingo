@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { UserContext } from "../context/UserContext";
 import { useSocketContext } from "../context/SocketContext";
+import { FiRefreshCcw } from "react-icons/fi";
 
 const Home = () => {
   const { user, logout } = useContext(UserContext);
@@ -123,19 +124,30 @@ const Home = () => {
                 : "Welcome to Bingo Arena"}
             </h1>
           </div>
-          <div
-            className={`flex items-center gap-2 text-xs px-3 py-1 rounded-full ${
-              isSocketConnected
-                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/40"
-                : "bg-red-500/10 text-red-400 border border-red-500/40"
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isSocketConnected ? "bg-emerald-400" : "bg-red-400"
+          <div className="flex gap-2">
+            <div
+              className={`flex items-center gap-2 text-sm px-3 py-1 rounded-full ${
+                isSocketConnected
+                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/40"
+                  : "bg-red-500/10 text-red-400 border border-red-500/40"
               }`}
-            />
-            <span>{isSocketConnected ? "Online" : "Offline"}</span>
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isSocketConnected ? "bg-emerald-400" : "bg-red-400"
+                }`}
+              />
+              <span>{isSocketConnected ? "Online" : "Offline"}</span>
+            </div>
+            <button
+              onClick={() => {
+                window.location.reload();
+              }}
+              className="flex items-center gap-2 text-sm px-3 py-1 rounded-full bg-zinc-700/40 border border-zinc-600"
+            >
+              <FiRefreshCcw />
+              <span>Refresh</span>
+            </button>
           </div>
         </div>
 
@@ -163,7 +175,7 @@ const Home = () => {
                   type="text"
                   value={roomIdInput}
                   onChange={(e) => setRoomIdInput(e.target.value)}
-                  placeholder="e.g. 12345 or SUMEET123"
+                  placeholder="e.g. 12345"
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm outline-none focus:border-emerald-500"
                 />
                 <span className="text-[10px] text-zinc-500">
@@ -177,6 +189,7 @@ const Home = () => {
                 <input
                   type="number"
                   min={1}
+                  max={6}
                   value={winnerLimitInput}
                   onChange={(e) => setWinnerLimitInput(e.target.value)}
                   className="w-full bg-zinc-800 border border-zinc-700 rounded-md px-3 py-2 text-sm outline-none focus:border-emerald-500"
