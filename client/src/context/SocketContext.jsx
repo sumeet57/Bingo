@@ -10,8 +10,10 @@ import { toast } from "react-toastify";
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children, currentUser }) => {
-  const [connected, setConnected] = useState(false);
-  const [room, setRoom] = useState(null);
+  // 🔥 IMPORTANT: initialize from socket.connected
+  const [connected, setConnected] = useState(socket.connected);
+
+  const [roomId, setRoomId] = useState(null);
   const [players, setPlayers] = useState([]);
   const [ticketIndex, setTicketIndex] = useState(null);
   const [drawnNumbers, setDrawnNumbers] = useState([]);
@@ -19,8 +21,33 @@ export const SocketProvider = ({ children, currentUser }) => {
   const [claims, setClaims] = useState(0);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
 
+  useEffect(() => {
+    const session = loadBingoSession();
+    if (!session) return;
+
+    if (session.roomId && !roomId) {
+      setRoomId(session.roomId);
+    }
+
+    if (
+      session.ticketIndex !== undefined &&
+      session.ticketIndex !== null &&
+      ticketIndex === null
+    ) {
+      setTicketIndex(Number(session.ticketIndex));
+    }
+
+    if (typeof session.claims === "number") {
+      setClaims(session.claims);
+    }
+
+    if (Array.isArray(session.selectedNumbers)) {
+      setSelectedNumbers(session.selectedNumbers);
+    }
+  }, []);
+
   const resetState = () => {
-    setRoom(null);
+    setRoomId(null);
     setPlayers([]);
     setTicketIndex(null);
     setDrawnNumbers([]);
@@ -29,103 +56,96 @@ export const SocketProvider = ({ children, currentUser }) => {
     setSelectedNumbers([]);
   };
 
+  /* ---------------- SOCKET EVENTS ---------------- */
+
   useEffect(() => {
-    const handleConnect = () => {
-      console.log("Socket connected:", socket.id);
+    const onConnect = () => {
       setConnected(true);
     };
 
-    const handleDisconnect = () => {
-      console.log("Socket disconnected");
+    const onDisconnect = () => {
       setConnected(false);
     };
 
-    const handleRoomUpdated = ({ room, players }) => {
-      setRoom(room);
-      setPlayers(players);
-
-      if (currentUser?._id) {
-        const me = players.find((p) => p.userId === currentUser._id);
-        if (me) {
-          setIsHost(me.role === "host");
-          if (typeof me.ticket === "number") {
-            setTicketIndex(me.ticket);
-          }
-        }
-      }
-    };
-
-    const handleGameStarted = ({ roomId }) => {
-      console.log("Game started in room:", roomId);
-      setRoom((prev) => (prev ? { ...prev, status: "ongoing" } : prev));
-    };
-
-    const handleNumberCalled = ({ drawnNumber }) => {
-      setDrawnNumbers(drawnNumber || []);
-    };
-
-    const handleClaimAccepted = (data) => {
-      if (currentUser?._id && data.userId === currentUser._id) {
-        setClaims(data.claims ?? 0);
-        const session = loadBingoSession();
-        if (session) {
-          saveBingoSession({
-            ...session,
-            claims: data.claims ?? 0,
-          });
-        }
-      }
-    };
-
-    const handleGameOver = (data) => {
-      console.log("Game over:", data);
-      toast.success(`Game Over! Winners: ${data.winnerNames.join(", ")}`, {
-        autoClose: 10000,
-        position: "top-center",
+    const onPlayerJoined = (p) => {
+      setPlayers((prev) => {
+        if (prev.some((x) => x.userId === p.userId)) return prev;
+        return [...prev, p];
       });
+
+      if (p.userId === currentUser?._id) {
+        setTicketIndex(p.ticket);
+        setIsHost(p.role === "host");
+      }
+    };
+
+    const onPlayerLeft = (userId) => {
+      setPlayers((prev) => prev.filter((p) => p.userId !== userId));
+    };
+
+    const onBingoStarted = () => {
+      // 🔔 notify Room.jsx via event
+      window.dispatchEvent(new Event("bingo-start"));
+    };
+
+    const onNumberCalled = (n) => {
+      setDrawnNumbers((prev) => (prev.includes(n) ? prev : [...prev, n]));
+    };
+
+    const onWinner = ({ userId, rank }) => {
+      if (userId === currentUser?._id) {
+        toast.success(`🎉 You won! Rank: ${rank}`);
+      }
+    };
+
+    const onGameOver = () => {
+      toast.info("Game over");
       clearBingoSession();
       resetState();
     };
 
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("room:updated", handleRoomUpdated);
-    socket.on("bingo:started", handleGameStarted);
-    socket.on("bingo:number_called", handleNumberCalled);
-    socket.on("bingo:claim_accepted", handleClaimAccepted);
-    socket.on("bingo:game_over", handleGameOver);
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+    socket.on("player:joined", onPlayerJoined);
+    socket.on("player:left", onPlayerLeft);
+    socket.on("bingo:started", onBingoStarted);
+    socket.on("bingo:number", onNumberCalled);
+    socket.on("winner", onWinner);
+    socket.on("game_over", onGameOver);
 
     return () => {
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("room:updated", handleRoomUpdated);
-      socket.off("bingo:started", handleGameStarted);
-      socket.off("bingo:number_called", handleNumberCalled);
-      socket.off("bingo:claim_accepted", handleClaimAccepted);
-      socket.off("bingo:game_over", handleGameOver);
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+      socket.off("player:joined", onPlayerJoined);
+      socket.off("player:left", onPlayerLeft);
+      socket.off("bingo:started", onBingoStarted);
+      socket.off("bingo:number", onNumberCalled);
+      socket.off("winner", onWinner);
+      socket.off("game_over", onGameOver);
     };
   }, [currentUser?._id]);
 
+  /* ---------------- ACTIONS ---------------- */
+
   const createRoom = ({ roomId, winnerLimit }) =>
     new Promise((resolve) => {
-      if (!currentUser?._id) {
-        return resolve({ ok: false, error: "no user" });
-      }
-
       socket.emit(
         "room:create",
         {
+          roomId,
+          winnerLimit,
           hostUserId: currentUser._id,
           hostName: currentUser?.fullName?.firstName || "Host",
-          winnerLimit,
-          roomId,
         },
         (res) => {
           if (res?.ok) {
+            setRoomId(roomId);
+            setTicketIndex(Number(res.ticketIndex));
+
             saveBingoSession({
+              roomId,
               userId: currentUser._id,
-              roomId: res.room?.id || roomId,
-              ticketIndex: res.ticketIndex,
+              ticketIndex: Number(res.ticketIndex),
               claims: 0,
               selectedNumbers: [],
             });
@@ -137,10 +157,6 @@ export const SocketProvider = ({ children, currentUser }) => {
 
   const joinRoom = (roomId) =>
     new Promise((resolve) => {
-      if (!currentUser?._id) {
-        return resolve({ ok: false, error: "no user" });
-      }
-
       socket.emit(
         "room:join",
         {
@@ -150,10 +166,13 @@ export const SocketProvider = ({ children, currentUser }) => {
         },
         (res) => {
           if (res?.ok) {
+            setRoomId(roomId);
+            setTicketIndex(Number(res.ticketIndex));
+
             saveBingoSession({
+              roomId,
               userId: currentUser._id,
-              roomId: res.room?.id || roomId,
-              ticketIndex: res.ticketIndex,
+              ticketIndex: Number(res.ticketIndex),
               claims: 0,
               selectedNumbers: [],
             });
@@ -163,122 +182,61 @@ export const SocketProvider = ({ children, currentUser }) => {
       );
     });
 
-  const startGame = () =>
-    new Promise((resolve) => {
-      if (!room?.id) return resolve({ ok: false, error: "no room" });
-      socket.emit("bingo:start", { roomId: room.id }, (res) => {
-        resolve(res || { ok: false });
-      });
-    });
+  const startGame = () => socket.emit("bingo:start", { roomId });
+  const callNextNumber = () => socket.emit("bingo:call_number", { roomId });
 
-  const callNextNumber = () =>
+  const claimPattern = (numbers) =>
     new Promise((resolve) => {
-      if (!room?.id) return resolve({ ok: false, error: "no room" });
-      socket.emit("bingo:call_number", { roomId: room.id }, (res) => {
-        resolve(res || { ok: false });
-      });
-    });
-
-  const claimPattern = (numbersToClaim) =>
-    new Promise((resolve) => {
-      if (!room?.id || !currentUser?._id) {
-        return resolve({ ok: false, error: "no room or user" });
-      }
-
       socket.emit(
         "bingo:claim",
         {
-          roomId: room.id,
+          roomId,
           userId: currentUser._id,
-          claimType: "pattern",
-          selectedNumbers: numbersToClaim,
+          selectedNumbers: numbers,
         },
         (res) => {
-          if (res?.ok) {
-            const session = loadBingoSession();
-            if (session) {
-              saveBingoSession({
-                ...session,
-                claims: res.claims,
-              });
-            }
-            if (typeof res.claims === "number") {
-              setClaims(res.claims);
-            }
+          if (res?.ok && typeof res.claims === "number") {
+            setClaims(res.claims);
           }
           resolve(res || { ok: false });
         }
       );
     });
 
-  const updateSelectedNumbers = (arr) => {
-    setSelectedNumbers(arr);
-    const session = loadBingoSession();
-    if (session) {
-      saveBingoSession({
-        ...session,
-        selectedNumbers: arr,
-      });
-    }
-  };
-
-  const rejoinIfPossible = () =>
+  const getLobbyRooms = () =>
     new Promise((resolve) => {
-      const session = loadBingoSession();
-      if (!session?.roomId || !session?.userId) {
-        return resolve({ ok: false, error: "no session" });
-      }
-
-      socket.emit(
-        "room:rejoin",
-        { roomId: session.roomId, userId: session.userId },
-        (res) => {
-          if (res?.ok) {
-            setRoom(res.room);
-            setPlayers(res.players || []);
-            setDrawnNumbers(res.drawnNumber || []);
-
-            const me = res.players?.find((p) => p.userId === session.userId);
-            if (me) {
-              setIsHost(me.role === "host");
-              if (typeof me.ticket === "number") {
-                setTicketIndex(me.ticket);
-              }
-            }
-
-            setClaims(session.claims ?? 0);
-            setSelectedNumbers(session.selectedNumbers || []);
-          }
-          resolve(res || { ok: false });
-        }
-      );
+      socket.emit("lobby:get_rooms", (rooms) => {
+        resolve(rooms || []);
+      });
     });
-
-  const value = {
-    state: {
-      connected,
-      room,
-      players,
-      ticketIndex,
-      drawnNumbers,
-      isHost,
-      claims,
-      selectedNumbers,
-    },
-    actions: {
-      createRoom,
-      joinRoom,
-      startGame,
-      callNextNumber,
-      claimPattern,
-      setSelectedNumbers: updateSelectedNumbers,
-      rejoinIfPossible,
-      resetState,
-    },
-  };
 
   return (
-    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
+    <SocketContext.Provider
+      value={{
+        state: {
+          connected,
+          roomId,
+          players,
+          ticketIndex,
+          drawnNumbers,
+          isHost,
+          claims,
+          selectedNumbers,
+        },
+        actions: {
+          createRoom,
+          joinRoom,
+          startGame,
+          callNextNumber,
+          claimPattern,
+          setSelectedNumbers,
+          resetState,
+          getLobbyRooms,
+        },
+      }}
+    >
+      {children}
+    </SocketContext.Provider>
   );
 };
 

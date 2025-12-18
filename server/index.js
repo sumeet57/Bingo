@@ -5,6 +5,7 @@ import http from "http";
 import app from "./app.js";
 import { connectDB } from "./config/Database.js";
 import initSocket from "./sockets/index.js";
+import redis from "./config/redis.js";
 
 const PORT = process.env.PORT || 5000;
 

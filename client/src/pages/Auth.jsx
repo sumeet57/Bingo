@@ -91,6 +91,10 @@ const Auth = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white">Bingo Arena</h1>
+            <p className="text-zinc-400 mt-2">
+              Server is under maintenance due to implementation of new features.
+              Please check back later.
+            </p>
             <p className="text-zinc-400 mt-2 text-sm">
               {isLogin ? "Welcome back!" : "Create your account"}
             </p>

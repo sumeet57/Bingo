@@ -1,116 +1,72 @@
-const rooms = new Map();
+import redis from "../config/redis.js";
+import { K } from "./constants.js";
 
-
-
-export function createRoom(roomId, options = {}) {
-  if (rooms.has(roomId)) return rooms.get(roomId);
-  const room = {
-    id: roomId,
-    drawnNumber: [],
-    status: "pending",
-    winnerLimit: options.winnerLimit || 1,
-    winner: [],
-    assignedTickets: [],
-  };
-  rooms.set(roomId, room);
-  return room;
+export async function createRoomAtomic(roomId, winnerLimit = 1) {
+  const pipe = redis.pipeline();
+  pipe.hsetnx(K.ROOM(roomId), "s", "pending");
+  pipe.hsetnx(K.ROOM(roomId), "wl", winnerLimit);
+  pipe.setnx(K.TICKET_COUNTER(roomId), 0);
+  pipe.expire(K.ROOM(roomId), 7200);
+  pipe.expire(K.TICKET_COUNTER(roomId), 7200);
+  await pipe.exec();
 }
 
-export function updateRoom(roomId, data) {
-  const room = rooms.get(roomId);
-  if (!room) return null;
-  const updated = { ...room, ...data };
-  rooms.set(roomId, updated);
-  return updated;
+export async function assignTicketAtomic(roomId, max = 100) {
+  const ticket = (await redis.incr(K.TICKET_COUNTER(roomId))) - 1;
+  return ticket < max ? ticket : null;
 }
 
-export function getRoom(roomId) {
-  return rooms.get(roomId) ?? null;
+export async function setRoomStatus(roomId, status) {
+  await redis.hset(K.ROOM(roomId), "s", status);
 }
 
-export function hasRoom(roomId) {
-  return rooms.has(roomId);
+export async function addDrawnNumber(roomId, n) {
+  return (await redis.sadd(K.DRAWN(roomId), n)) === 1;
 }
 
-export function getAllRooms() {
-  return Array.from(rooms.values());
-}
+export async function registerWinner(roomId, userId) {
+  const pipe = redis.pipeline();
+  pipe.hget(K.ROOM(roomId), "wl");
+  pipe.lpos(K.WINNERS(roomId), userId);
+  pipe.llen(K.WINNERS(roomId));
 
-export function setRoomStatus(roomId, status) {
-  const room = rooms.get(roomId);
-  if (!room) return null;
-  room.status = status;
-  return room;
-}
+  const [[, wl], [, exists], [, count]] = await pipe.exec();
 
-export function addDrawnNumber(roomId, number) {
-  const room = rooms.get(roomId);
-  if (!room) return null;
-  if (!room.drawnNumber.includes(number)) room.drawnNumber.push(number);
-  return room;
-}
+  if (exists !== null) return { status: "duplicate" };
+  if (count >= Number(wl)) return { status: "limit" };
 
-export function assignTicketIndex(roomId) {
-  const room = rooms.get(roomId);
-  if (!room) return null;
-  if (room.assignedTickets.length >= 100) return null;
-  let index;
-  do {
-    index = Math.floor(Math.random() * 100);
-  } while (room.assignedTickets.includes(index));
-  room.assignedTickets.push(index);
-  return index; // return between 0-99
-}
+  await redis.rpush(K.WINNERS(roomId), userId);
 
-export function releaseTicketIndex(roomId, index) {
-  const room = rooms.get(roomId);
-  if (!room) return null;
-  room.assignedTickets = room.assignedTickets.filter((i) => i !== index);
-  return index;
-}
-
-export function registerWinner(roomId, userId) {
-  const room = rooms.get(roomId);
-  if (!room) return { status: "invalid-room" };
-  if (room.winner.includes(userId)) {
-    return {
-      status: "duplicate",
-      index: room.winner.indexOf(userId),
-    };
+  if (count + 1 >= Number(wl)) {
+    await redis.hset(K.ROOM(roomId), "s", "completed");
   }
-  if (room.winner.length < room.winnerLimit) {
-    room.winner.push(userId);
-    if (room.winner.length >= room.winnerLimit) room.status = "completed";
-    return {
-      status: "accepted",
-      index: room.winner.length - 1,
-      rank: room.winner.length,
-    };
+
+  return { status: "accepted", rank: count + 1 };
+}
+
+export async function cleanupRoom(io, roomId) {
+  const pipe = redis.pipeline();
+  pipe.del(
+    K.ROOM(roomId),
+    K.TICKET_COUNTER(roomId),
+    K.PLAYERS(roomId),
+    K.CLAIMS(roomId),
+    K.DRAWN(roomId),
+    K.WINNERS(roomId),
+    K.SOCKETS(roomId)
+  );
+  await pipe.exec();
+  io.in(roomId).socketsLeave(roomId);
+}
+
+export async function getAllRooms() {
+  const keys = await redis.keys("r:*");
+  const rooms = [];
+  for (const key of keys) {
+    if (key.includes(":")) continue;
+    const roomId = key.split(":")[1];
+    const roomData = await redis.hgetall(K.ROOM(roomId));
+    rooms.push({ roomId, ...roomData });
   }
-  return { status: "limit-reached" };
+  return rooms;
 }
-
-export function isGameOver(roomId) {
-  const room = rooms.get(roomId);
-  if (!room) return false;
-  return room.winner.length >= room.winnerLimit;
-}
-
-export function deleteRoom(roomId) {
-  return rooms.delete(roomId);
-}
-
-export default {
-  createRoom,
-  updateRoom,
-  getRoom,
-  hasRoom,
-  getAllRooms,
-  setRoomStatus,
-  addDrawnNumber,
-  assignTicketIndex,
-  releaseTicketIndex,
-  registerWinner,
-  isGameOver,
-  deleteRoom,
-};

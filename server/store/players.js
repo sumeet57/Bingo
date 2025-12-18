@@ -1,91 +1,40 @@
-const players = new Map();
+import redis from "../config/redis.js";
+import { K } from "./constants.js";
 
-export function initRoomPlayers(roomId) {
-  if (!players.has(roomId)) players.set(roomId, new Map());
-  return players.get(roomId);
+export async function addPlayer(roomId, userId, name, ticket, role = "p") {
+  const pipe = redis.pipeline();
+  pipe.hset(K.PLAYERS(roomId), userId, `${name}|${ticket}|${role}`);
+  pipe.hsetnx(K.CLAIMS(roomId), userId, 0);
+  pipe.expire(K.PLAYERS(roomId), 3600);
+  pipe.expire(K.CLAIMS(roomId), 3600);
+  await pipe.exec();
 }
 
-export function addPlayer(roomId, userId, playerData) {
-  const roomPlayers = initRoomPlayers(roomId);
-  const existing = roomPlayers.get(userId) || {
-    name: playerData.name || "",
-    role: playerData.role || "player",
-    claims: 0,
-    ticket: playerData.ticket ?? null,
+export async function removePlayer(roomId, userId) {
+  const pipe = redis.pipeline();
+  pipe.hdel(K.PLAYERS(roomId), userId);
+  pipe.hdel(K.CLAIMS(roomId), userId);
+  await pipe.exec();
+}
+
+export async function getPlayer(roomId, userId) {
+  const pipe = redis.pipeline();
+  pipe.hget(K.PLAYERS(roomId), userId);
+  pipe.hget(K.CLAIMS(roomId), userId);
+  const [[, p], [, c]] = await pipe.exec();
+
+  if (!p) return null;
+  const [name, ticket, role] = p.split("|");
+
+  return {
+    userId,
+    name,
+    ticket: Number(ticket),
+    role,
+    claims: Number(c || 0),
   };
-
-  const updated = { ...existing, ...playerData };
-  roomPlayers.set(userId, updated);
-  return updated;
 }
 
-export function hasPlayer(roomId, userId) {
-  const roomPlayers = players.get(roomId);
-  if (!roomPlayers) return false;
-  return roomPlayers.has(userId);
+export async function incrementClaims(roomId, userId) {
+  return redis.hincrby(K.CLAIMS(roomId), userId, 1);
 }
-
-export function getPlayer(roomId, userId) {
-  const roomPlayers = players.get(roomId);
-  if (!roomPlayers) return null;
-  return roomPlayers.get(userId) || null;
-}
-
-export function getPlayersInRoom(roomId) {
-  const roomPlayers = players.get(roomId);
-  if (!roomPlayers) return [];
-  return Array.from(roomPlayers.entries()).map(([uid, data]) => ({
-    userId: uid,
-    ...data,
-  }));
-}
-
-export function removePlayer(roomId, userId) {
-  const roomPlayers = players.get(roomId);
-  if (!roomPlayers) return false;
-  const deleted = roomPlayers.delete(userId);
-  if (roomPlayers.size === 0) players.delete(roomId);
-  return deleted;
-}
-
-export function clearRoomPlayers(roomId) {
-  return players.delete(roomId);
-}
-
-export function incrementPlayerClaims(roomId, userId) {
-  const roomPlayers = players.get(roomId);
-  if (!roomPlayers) return null;
-  const player = roomPlayers.get(userId);
-  if (!player) return null;
-  player.claims = (player.claims || 0) + 1;
-  return player;
-}
-
-export function setPlayerTicket(roomId, userId, ticket) {
-  const roomPlayers = initRoomPlayers(roomId);
-  const player = roomPlayers.get(userId) || {
-    name: "",
-    claims: 0,
-    ticket: null,
-  };
-  player.ticket = ticket;
-  roomPlayers.set(userId, player);
-  return player;
-}
-
-export function getRoomPlayersMap(roomId) {
-  return players.get(roomId) || null;
-}
-
-export default {
-  initRoomPlayers,
-  addPlayer,
-  hasPlayer,
-  getPlayer,
-  getPlayersInRoom,
-  removePlayer,
-  clearRoomPlayers,
-  incrementPlayerClaims,
-  setPlayerTicket,
-  getRoomPlayersMap,
-};
