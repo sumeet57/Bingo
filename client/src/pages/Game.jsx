@@ -19,7 +19,6 @@ const Game = () => {
     drawnNumbers,
     claims,
     isHost,
-    selectedNumbers,
     roomId: ctxRoomId,
     ticketIndex: ctxTicketIndex,
   } = state;
@@ -27,7 +26,6 @@ const Game = () => {
   const navigate = useNavigate();
   const { state: navState } = useLocation();
 
-  // ✅ load session ONCE
   const sessionRef = useRef(loadBingoSession());
 
   const roomId =
@@ -39,102 +37,73 @@ const Game = () => {
     sessionRef.current?.ticketIndex ??
     null;
 
-  // 🔥 normalize ONCE
   const ticketIndex = rawTicketIndex !== null ? Number(rawTicketIndex) : null;
 
   const [hydrated, setHydrated] = useState(false);
   const [selectedCells, setSelectedCells] = useState([]);
   const [claimedNumbers, setClaimedNumbers] = useState([]);
 
-  /* ---------------- HYDRATION ---------------- */
-
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  /* ---------------- SAFE GUARD ---------------- */
+  useEffect(() => setHydrated(true), []);
 
   useEffect(() => {
     if (!hydrated) return;
 
     if (!user?._id || !roomId) {
-      toast.error("Missing user or room. Redirecting...");
+      toast.error("Missing user or room.");
       navigate("/");
       return;
     }
 
-    if (typeof ticketIndex !== "number" || Number.isNaN(ticketIndex)) {
-      toast.error("Ticket not found. Redirecting...");
+    if (!Number.isInteger(ticketIndex)) {
+      toast.error("Ticket not found.");
       navigate("/");
     }
   }, [hydrated, user?._id, roomId, ticketIndex, navigate]);
 
-  /* ---------------- DERIVE TICKET ---------------- */
-
   const ticket = useMemo(() => {
-    if (typeof ticketIndex !== "number" || Number.isNaN(ticketIndex)) {
-      return null;
-    }
+    if (!Number.isInteger(ticketIndex)) return null;
     return tickets[ticketIndex];
   }, [ticketIndex]);
-  /* ---------------- CELL SELECTION ---------------- */
-
-  const toggleCellSelection = (value, key) => {
-    setSelectedCells((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
-    );
-
-    if (typeof value === "number") {
-      const updated = selectedNumbers.includes(value)
-        ? selectedNumbers.filter((n) => n !== value)
-        : [...selectedNumbers, value];
-
-      actions.setSelectedNumbers(updated);
-    }
-  };
 
   const handleCallNumber = () => {
     actions.callNextNumber();
   };
 
-  /* ---------------- CLAIM ---------------- */
+  /* ---------------- PATTERN DETECTION ---------------- */
 
-  const isValidStraightLine = (cells) => {
-    if (cells.length !== GRID_SIZE) return false;
+  const detectPattern = (cells) => {
+    if (cells.length !== GRID_SIZE) return null;
 
-    const coords = cells.map((key) => {
-      const [r, c] = key.split("-").map(Number);
-      return { r, c };
-    });
+    const coords = cells.map((k) => k.split("-").map(Number));
+    const rows = coords.map((c) => c[0]);
+    const cols = coords.map((c) => c[1]);
 
-    const rows = new Set(coords.map((p) => p.r));
-    const cols = new Set(coords.map((p) => p.c));
+    const sameRow = rows.every((r) => r === rows[0]);
+    if (sameRow) return { type: "row", index: rows[0] };
 
-    if (rows.size === 1 || cols.size === 1) return true;
+    const sameCol = cols.every((c) => c === cols[0]);
+    if (sameCol) return { type: "col", index: cols[0] };
 
-    const mainDiag = coords.every((p) => p.r === p.c);
-    const antiDiag = coords.every((p) => p.r + p.c === GRID_SIZE - 1);
+    const mainDiag = coords.every(([r, c]) => r === c);
+    if (mainDiag) return { type: "diag", index: 0 };
 
-    return mainDiag || antiDiag;
+    const antiDiag = coords.every(([r, c]) => r + c === GRID_SIZE - 1);
+    if (antiDiag) return { type: "diag", index: 1 };
+
+    return null;
   };
 
+  /* ---------------- CLAIM ---------------- */
+
   const handleClaim = async () => {
-    if (selectedCells.length !== GRID_SIZE) {
-      toast.error("Select exactly 5 cells.");
+    const pattern = detectPattern(selectedCells);
+
+    if (!pattern) {
+      toast.error("Select a valid row, column, or diagonal.");
       return;
     }
 
-    if (!isValidStraightLine(selectedCells)) {
-      toast.error("Cells must form a straight line.");
-      return;
-    }
-
-    if (selectedNumbers.length < 4 || selectedNumbers.length > 5) {
-      toast.error("Invalid claim.");
-      return;
-    }
-
-    const res = await actions.claimPattern([...selectedNumbers]);
+    const res = await actions.claimPattern(pattern);
 
     if (!res?.ok) {
       toast.error(res?.error || "Claim rejected.");
@@ -143,15 +112,21 @@ const Game = () => {
 
     toast.success("Claim accepted!");
 
-    setClaimedNumbers((prev) => [...new Set([...prev, ...selectedNumbers])]);
+    setClaimedNumbers((prev) => {
+      const claimedValues = selectedCells
+        .map((key) => {
+          const [r, c] = key.split("-").map(Number);
+          return ticket[r][c];
+        })
+        .filter((v) => typeof v === "number");
 
-    actions.setSelectedNumbers([]);
+      return [...new Set([...prev, ...claimedValues])];
+    });
+
     setSelectedCells([]);
   };
 
-  /* ---------------- RENDER ---------------- */
-
-  if (!ticket) return null; // prevent flicker
+  if (!ticket) return null;
 
   return (
     <div className="min-h-screen w-full bg-zinc-900 text-white flex flex-col items-center p-6">
@@ -166,14 +141,14 @@ const Game = () => {
       />
 
       <div className="flex items-center gap-2 mt-3">
-        {BINGO_LETTERS.map((letter, i) => (
+        {BINGO_LETTERS.map((l, i) => (
           <span
-            key={letter}
+            key={l}
             className={`text-2xl font-extrabold ${
               claims > i ? "line-through text-emerald-400" : "text-zinc-500"
             }`}
           >
-            {letter}
+            {l}
           </span>
         ))}
       </div>
@@ -184,7 +159,15 @@ const Game = () => {
           drawnNumbers={drawnNumbers}
           claimedNumbers={claimedNumbers}
           selectedCells={selectedCells}
-          onCellToggle={toggleCellSelection}
+          onCellToggle={(value, key) =>
+            setSelectedCells((prev) =>
+              prev.includes(key)
+                ? prev.filter((k) => k !== key)
+                : prev.length < 5
+                ? [...prev, key]
+                : prev
+            )
+          }
           onClaim={handleClaim}
         />
       </div>

@@ -110,8 +110,8 @@ export const SocketProvider = ({ children, currentUser }) => {
     socket.on("player:left", onPlayerLeft);
     socket.on("bingo:started", onBingoStarted);
     socket.on("bingo:number", onNumberCalled);
-    socket.on("winner", onWinner);
-    socket.on("game_over", onGameOver);
+    socket.on("winner:added", onWinner);
+    socket.on("game:over", onGameOver);
 
     return () => {
       socket.off("connect", onConnect);
@@ -120,8 +120,8 @@ export const SocketProvider = ({ children, currentUser }) => {
       socket.off("player:left", onPlayerLeft);
       socket.off("bingo:started", onBingoStarted);
       socket.off("bingo:number", onNumberCalled);
-      socket.off("winner", onWinner);
-      socket.off("game_over", onGameOver);
+      socket.off("winner:added", onWinner);
+      socket.off("game:over", onGameOver);
     };
   }, [currentUser?._id]);
 
@@ -185,19 +185,34 @@ export const SocketProvider = ({ children, currentUser }) => {
   const startGame = () => socket.emit("bingo:start", { roomId });
   const callNextNumber = () => socket.emit("bingo:call_number", { roomId });
 
-  const claimPattern = (numbers) =>
+  const claimPattern = ({ type, index }) =>
     new Promise((resolve) => {
+      if (!roomId || !currentUser?._id) {
+        return resolve({ ok: false, error: "Invalid state" });
+      }
+
       socket.emit(
         "bingo:claim",
         {
           roomId,
           userId: currentUser._id,
-          selectedNumbers: numbers,
+          ticketIndex,
+          pattern: {
+            type, // "row" | "col" | "diag"
+            index, // 0–4 (for row/col), 0 or 1 for diag
+          },
+          player: {
+            name:
+              `${currentUser?.fullName?.firstName || ""} ${
+                currentUser?.fullName?.lastName || ""
+              }`.trim() || "Player",
+          },
         },
         (res) => {
           if (res?.ok && typeof res.claims === "number") {
             setClaims(res.claims);
           }
+
           resolve(res || { ok: false });
         }
       );
