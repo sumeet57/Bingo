@@ -12,7 +12,7 @@ if (!host || !port) {
 const redis = new Redis({
   host,
   port,
-  //   password,
+  password,
 
   keepAlive: 30000, // 30 seconds
   tcpNoDelay: true,
