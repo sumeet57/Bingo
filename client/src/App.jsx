@@ -8,6 +8,7 @@ import { UserContext, UserContextProvider } from "./context/UserContext";
 import { SocketProvider } from "./context/SocketContext";
 import { ToastContainer } from "react-toastify";
 import LandingPage from "./pages/LandingPage";
+import Leaderboard from "./pages/Leaderboard";
 
 const AppInner = () => {
   const { user } = useContext(UserContext);
@@ -20,6 +21,7 @@ const AppInner = () => {
         <Route path="/room" element={<Room />} />
         <Route path="/game" element={<Game />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/winners" element={<Leaderboard />} />
       </Routes>
     </SocketProvider>
   );

@@ -35,43 +35,51 @@ export async function registerWinner(roomId, user) {
   const { userId, name } = user;
 
   const pipe = redis.pipeline();
-
   pipe.hget(K.ROOM(roomId), "wl");
   pipe.lpos(K.WINNERS(roomId), userId);
   pipe.llen(K.WINNERS(roomId));
 
   const [[, wl], [, exists], [, count]] = await pipe.exec();
-
   const winnerLimit = Number(wl);
 
-  if (exists !== null) {
-    return { status: "duplicate" };
-  }
+  if (exists !== null) return { status: "duplicate" };
+  if (count >= winnerLimit) return { status: "limit" };
 
-  if (count >= winnerLimit) {
-    return { status: "limit" };
-  }
-
-  // Register winner
-  const newRank = count + 1;
+  const rank = count + 1;
   await redis.rpush(K.WINNERS(roomId), userId);
 
-  let completed = false;
-
-  if (newRank >= winnerLimit) {
-    await redis.hset(K.ROOM(roomId), "s", "completed");
-    completed = true;
+  if (rank < winnerLimit) {
+    return {
+      status: "accepted",
+      rank,
+      completed: false,
+      winners: [{ userId, name, rank }],
+    };
   }
+
+  // 🔥 Game completed → fetch all winners + names
+  const [winnerIds, players] = await Promise.all([
+    redis.lrange(K.WINNERS(roomId), 0, -1),
+    redis.hgetall(K.PLAYERS(roomId)),
+    redis.hset(K.ROOM(roomId), "s", "completed"),
+  ]);
+
+  const winners = winnerIds.map((id, i) => {
+    const raw = players[id]; // "Name|ticket|role"
+    const winnerName = raw ? raw.split("|")[0] : "Player";
+
+    return {
+      userId: id,
+      name: winnerName,
+      rank: i + 1,
+    };
+  });
 
   return {
     status: "accepted",
-    rank: newRank,
-    winner: {
-      userId,
-      name,
-      rank: newRank,
-    },
-    completed,
+    rank,
+    completed: true,
+    winners,
   };
 }
 
@@ -81,7 +89,7 @@ export async function cleanupRoom(io, roomId) {
     K.ROOM(roomId),
     K.TICKET_COUNTER(roomId),
     K.PLAYERS(roomId),
-    K.CLAIMS(roomId),
+    K.CLAIMS(roomId, "*"),
     K.DRAWN(roomId),
     K.WINNERS(roomId),
     K.SOCKETS(roomId)

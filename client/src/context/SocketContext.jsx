@@ -6,13 +6,12 @@ import {
   clearBingoSession,
 } from "../utils/bingoSession";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children, currentUser }) => {
-  // 🔥 IMPORTANT: initialize from socket.connected
   const [connected, setConnected] = useState(socket.connected);
-
   const [roomId, setRoomId] = useState(null);
   const [players, setPlayers] = useState([]);
   const [ticketIndex, setTicketIndex] = useState(null);
@@ -20,6 +19,8 @@ export const SocketProvider = ({ children, currentUser }) => {
   const [isHost, setIsHost] = useState(false);
   const [claims, setClaims] = useState(0);
   const [selectedNumbers, setSelectedNumbers] = useState([]);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const session = loadBingoSession();
@@ -56,9 +57,9 @@ export const SocketProvider = ({ children, currentUser }) => {
     setSelectedNumbers([]);
   };
 
-  /* ---------------- SOCKET EVENTS ---------------- */
-
   useEffect(() => {
+    setConnected(socket.connected);
+
     const onConnect = () => {
       setConnected(true);
     };
@@ -84,7 +85,6 @@ export const SocketProvider = ({ children, currentUser }) => {
     };
 
     const onBingoStarted = () => {
-      // 🔔 notify Room.jsx via event
       window.dispatchEvent(new Event("bingo-start"));
     };
 
@@ -98,12 +98,15 @@ export const SocketProvider = ({ children, currentUser }) => {
       }
     };
 
-    const onGameOver = () => {
-      toast.info("Game over");
+    const onGameOver = (data) => {
+      console.log("Game over data:", data);
+      toast.info("Game over", { autoClose: 5000 });
+      navigate("/winners", { state: { data: data.winners } });
       clearBingoSession();
       resetState();
     };
 
+    socket.on("game:over", onGameOver);
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("player:joined", onPlayerJoined);
@@ -111,7 +114,6 @@ export const SocketProvider = ({ children, currentUser }) => {
     socket.on("bingo:started", onBingoStarted);
     socket.on("bingo:number", onNumberCalled);
     socket.on("winner:added", onWinner);
-    socket.on("game:over", onGameOver);
 
     return () => {
       socket.off("connect", onConnect);
@@ -123,9 +125,7 @@ export const SocketProvider = ({ children, currentUser }) => {
       socket.off("winner:added", onWinner);
       socket.off("game:over", onGameOver);
     };
-  }, [currentUser?._id]);
-
-  /* ---------------- ACTIONS ---------------- */
+  }, [currentUser?._id, navigate]);
 
   const createRoom = ({ roomId, winnerLimit }) =>
     new Promise((resolve) => {
@@ -198,8 +198,8 @@ export const SocketProvider = ({ children, currentUser }) => {
           userId: currentUser._id,
           ticketIndex,
           pattern: {
-            type, // "row" | "col" | "diag"
-            index, // 0–4 (for row/col), 0 or 1 for diag
+            type,
+            index,
           },
           player: {
             name:

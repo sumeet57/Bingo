@@ -39,16 +39,35 @@ export default function registerGameHandlers(io, socket) {
         return cb({ ok: false, error: "Invalid ticket" });
       }
 
+      const patternKey = `${pattern.type}:${pattern.index}`;
+      const claimKey = K.CLAIMS(roomId, userId); // c:{roomId}:{userId}
+
+      const pipe = redis.pipeline();
+      pipe.sismember(claimKey, patternKey);
+      pipe.scard(claimKey);
+
+      const [[, alreadyClaimed], [, claimCount]] = await pipe.exec();
+
+      if (alreadyClaimed === 1) {
+        return cb({ ok: false, error: "Pattern already claimed" });
+      }
+
+      if (claimCount >= 5) {
+        return cb({ ok: false, error: "Claim limit reached" });
+      }
+
       const drawn = await redis.smembers(K.DRAWN(roomId));
       const drawnSet = new Set(drawn.map(Number));
 
       const patternNumbers = extractPatternNumbers(ticket, pattern);
-
       if (!isValidClaim(patternNumbers, drawnSet)) {
         return cb({ ok: false, error: "Invalid claim" });
       }
 
-      const claims = await incrementClaims(roomId, userId);
+      await redis.sadd(claimKey, patternKey);
+      await redis.expire(claimKey, 7200);
+
+      const claims = claimCount + 1;
 
       if (claims >= 5) {
         const res = await registerWinner(roomId, {
@@ -57,11 +76,12 @@ export default function registerGameHandlers(io, socket) {
         });
 
         if (res.status === "accepted") {
-          io.to(roomId).emit("winner:added", res.winner);
+          io.to(roomId).emit("winner:added", res.winners.at(-1));
 
           if (res.completed) {
+            console.log(res);
             io.to(roomId).emit("game:over", {
-              winners: res.winner,
+              winners: res.winners,
             });
             await cleanupRoom(io, roomId);
           }
